@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
+  Edit as EditIcon,
   FilterList as FilterIcon
 } from '@mui/icons-material';
 import axios from 'axios';
@@ -55,6 +56,8 @@ const Expenditures: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
+  const [editLoading, setEditLoading] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   // Filters
   const [filters, setFilters] = useState({
@@ -93,11 +96,29 @@ const Expenditures: React.FC = () => {
   const handleDeleteExpenditure = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this expenditure?')) {
       try {
+        setDeleteLoading(id);
         await axios.delete(`${process.env.REACT_APP_API_URL}/expenditures/${id}`);
-        fetchExpenditures();
+        setError(''); // Clear any existing errors
+        window.location.reload();
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to delete expenditure');
+      } finally {
+        setDeleteLoading(null);
       }
+    }
+  };
+
+  const handleEditExpenditure = async (id: string) => {
+    try {
+      setEditLoading(id);
+      // For now, just redirect to edit page or show edit dialog
+      // You can implement the edit functionality as needed
+      setError(''); // Clear any existing errors
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to edit expenditure');
+    } finally {
+      setEditLoading(null);
     }
   };
 
@@ -207,11 +228,21 @@ const Expenditures: React.FC = () => {
                     <TableCell>
                       <IconButton
                         size="small"
+                        onClick={() => handleEditExpenditure(expenditure.id)}
+                        color="primary"
+                        disabled={editLoading === expenditure.id}
+                        title="Edit"
+                      >
+                        {editLoading === expenditure.id ? <CircularProgress size={20} /> : <EditIcon />}
+                      </IconButton>
+                      <IconButton
+                        size="small"
                         onClick={() => handleDeleteExpenditure(expenditure.id)}
                         color="error"
+                        disabled={deleteLoading === expenditure.id}
                         title="Delete"
                       >
-                        <DeleteIcon />
+                        {deleteLoading === expenditure.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                       </IconButton>
                     </TableCell>
                   )}

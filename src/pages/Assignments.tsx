@@ -118,6 +118,7 @@ const Assignments: React.FC = () => {
   const [expendingAssignment, setExpendingAssignment] = useState<Assignment | null>(null);
   const [expendQuantity, setExpendQuantity] = useState(1);
   const [expendReason, setExpendReason] = useState('');
+  const [expendLoading, setExpendLoading] = useState(false);
 
   const [formData, setFormData] = useState<CreateAssignmentForm>({
     asset_id: '',
@@ -404,6 +405,7 @@ const Assignments: React.FC = () => {
     }
     
     try {
+      setExpendLoading(true);
       await axios.put(`${process.env.REACT_APP_API_URL}/assignments/${expendingAssignment.id}/expend`, {
         quantity: expendQuantity,
         reason: expendReason,
@@ -411,8 +413,14 @@ const Assignments: React.FC = () => {
       setExpendDialog(false);
       setExpendingAssignment(null);
       setExpendReason('');
-      fetchAllAssignments();
+      setExpendLoading(false);
+      
+      // Show success message and refresh the page
+      setError(''); // Clear any existing errors
+      alert('Asset expended successfully! Refreshing page...');
+      window.location.reload();
     } catch (err: any) {
+      setExpendLoading(false);
       setError(err.response?.data?.error || 'Failed to expend assignment');
     }
   };
@@ -421,6 +429,7 @@ const Assignments: React.FC = () => {
     setExpendDialog(false);
     setExpendingAssignment(null);
     setExpendReason('');
+    setExpendLoading(false);
   };
 
   if (loading) {
@@ -749,14 +758,15 @@ const Assignments: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleExpendCancel}>Cancel</Button>
+          <Button onClick={handleExpendCancel} disabled={expendLoading}>Cancel</Button>
           <Button 
             onClick={handleExpendSubmit} 
             variant="contained" 
             color="warning"
-            disabled={!expendReason.trim()}
+            disabled={!expendReason.trim() || expendLoading}
+            startIcon={expendLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            Expend Asset
+            {expendLoading ? 'Expending...' : 'Expend Asset'}
           </Button>
         </DialogActions>
       </Dialog>

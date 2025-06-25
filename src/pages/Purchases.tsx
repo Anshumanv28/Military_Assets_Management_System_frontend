@@ -86,6 +86,10 @@ const Purchases: React.FC = () => {
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [approveLoading, setApproveLoading] = useState<string | null>(null);
+  const [rejectLoading, setRejectLoading] = useState<string | null>(null);
 
   const { assets = [] } = useData();
 
@@ -184,44 +188,58 @@ const Purchases: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      setSubmitLoading(true);
       if (editingPurchase) {
         await axios.put(`${process.env.REACT_APP_API_URL}/purchases/${editingPurchase.id}`, formData);
       } else {
         await axios.post(`${process.env.REACT_APP_API_URL}/purchases`, formData);
       }
-      fetchAllPurchases();
-      handleCloseDialog();
+      setError(''); // Clear any existing errors
+      window.location.reload();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save purchase');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this purchase?')) {
       try {
+        setDeleteLoading(id);
         await axios.delete(`${process.env.REACT_APP_API_URL}/purchases/${id}`);
         fetchAllPurchases();
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to delete purchase');
+      } finally {
+        setDeleteLoading(null);
       }
     }
   };
 
   const handleApprove = async (id: string) => {
     try {
+      setApproveLoading(id);
       await axios.put(`${process.env.REACT_APP_API_URL}/purchases/${id}/approve`);
-      await fetchAllPurchases();
+      setError('');
+      window.location.reload();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to approve purchase');
+    } finally {
+      setApproveLoading(null);
     }
   };
 
   const handleReject = async (id: string) => {
     try {
+      setRejectLoading(id);
       await axios.put(`${process.env.REACT_APP_API_URL}/purchases/${id}/cancel`);
-      await fetchAllPurchases();
+      setError('');
+      window.location.reload();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to reject purchase');
+    } finally {
+      setRejectLoading(null);
     }
   };
 
@@ -368,8 +386,9 @@ const Purchases: React.FC = () => {
                             size="small"
                             onClick={() => handleApprove(purchase.id)}
                             color="success"
+                            disabled={approveLoading === purchase.id}
                           >
-                            <ApproveIcon />
+                            {approveLoading === purchase.id ? <CircularProgress size={20} /> : <ApproveIcon />}
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Reject Purchase">
@@ -377,8 +396,9 @@ const Purchases: React.FC = () => {
                             size="small"
                             onClick={() => handleReject(purchase.id)}
                             color="error"
+                            disabled={rejectLoading === purchase.id}
                           >
-                            <RejectIcon />
+                            {rejectLoading === purchase.id ? <CircularProgress size={20} /> : <RejectIcon />}
                           </IconButton>
                         </Tooltip>
                       </>
@@ -394,14 +414,16 @@ const Purchases: React.FC = () => {
                       </IconButton>
                     )}
                     {canDelete(purchase) && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(purchase.id)}
-                        color="error"
-                        title="Delete"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Tooltip title="Delete Purchase">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(purchase.id)}
+                          color="error"
+                          disabled={deleteLoading === purchase.id}
+                        >
+                          {deleteLoading === purchase.id ? <CircularProgress size={20} /> : <DeleteIcon />}
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </TableCell>
                 )}
@@ -507,9 +529,14 @@ const Purchases: React.FC = () => {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingPurchase ? 'Update' : 'Create'}
+          <Button onClick={handleCloseDialog} disabled={submitLoading}>Cancel</Button>
+          <Button 
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={!formData.asset_id || !formData.base_id || formData.quantity < 1 || !formData.supplier || !formData.purchase_date || submitLoading}
+            startIcon={submitLoading ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            {submitLoading ? (editingPurchase ? 'Updating...' : 'Creating...') : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

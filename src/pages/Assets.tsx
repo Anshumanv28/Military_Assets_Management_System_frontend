@@ -66,6 +66,8 @@ const Assets: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<CreateAssetForm>({
     name: '',
@@ -139,25 +141,33 @@ const Assets: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      setSubmitLoading(true);
       if (editingAsset) {
         await axios.put(`${process.env.REACT_APP_API_URL}/assets/${editingAsset.id}`, formData);
       } else {
         await axios.post(`${process.env.REACT_APP_API_URL}/assets`, formData);
       }
-      fetchAllAssets();
-      handleCloseDialog();
+      setError(''); // Clear any existing errors
+      window.location.reload();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save asset');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this asset?')) {
       try {
+        setDeleteLoading(id);
         await axios.delete(`${process.env.REACT_APP_API_URL}/assets/${id}`);
-        fetchAllAssets();
+        alert('Asset deleted successfully! Refreshing page...');
+        setError(''); // Clear any existing errors
+        window.location.reload();
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to delete asset');
+      } finally {
+        setDeleteLoading(null);
       }
     }
   };
@@ -270,8 +280,9 @@ const Assets: React.FC = () => {
                     <IconButton
                       color="error"
                       onClick={() => handleDelete(asset.id)}
+                      disabled={deleteLoading === asset.id}
                     >
-                      <DeleteIcon />
+                      {deleteLoading === asset.id ? <CircularProgress size={20} /> : <DeleteIcon />}
                     </IconButton>
                   </TableCell>
                 )}
@@ -365,13 +376,14 @@ const Assets: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleCloseDialog} disabled={submitLoading}>Cancel</Button>
           <Button 
             onClick={handleSubmit}
             variant="contained"
-            disabled={!formData.name || !formData.base_id || formData.quantity < 1}
+            disabled={!formData.name || !formData.base_id || formData.quantity < 1 || submitLoading}
+            startIcon={submitLoading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            Save
+            {submitLoading ? (editingAsset ? 'Updating...' : 'Creating...') : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>
