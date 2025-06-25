@@ -8,11 +8,6 @@ interface Base {
   code: string;
 }
 
-interface AssetType {
-  id: string;
-  name: string;
-}
-
 interface Asset {
   id: string;
   name: string;
@@ -26,12 +21,10 @@ interface Asset {
 
 interface DataContextType {
   bases: Base[];
-  assetTypes: AssetType[];
   assets: Asset[];
   loading: boolean;
   error: string | null;
   refreshBases: () => Promise<void>;
-  refreshAssetTypes: () => Promise<void>;
   refreshAssets: () => Promise<void>;
 }
 
@@ -51,7 +44,6 @@ interface DataProviderProps {
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [bases, setBases] = useState<Base[]>([]);
-  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,21 +60,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         setError('Authentication required. Please log in.');
       } else {
         setError('Failed to fetch bases');
-      }
-    }
-  };
-
-  const fetchAssetTypes = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/asset-types`);
-      setAssetTypes(response.data.data);
-      setError(null);
-    } catch (err: any) {
-      console.error('Failed to fetch asset types:', err);
-      if (err.response?.status === 401) {
-        setError('Authentication required. Please log in.');
-      } else {
-        setError('Failed to fetch asset types');
       }
     }
   };
@@ -106,10 +83,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     await fetchBases();
   };
 
-  const refreshAssetTypes = async () => {
-    await fetchAssetTypes();
-  };
-
   const refreshAssets = async () => {
     await fetchAssets();
   };
@@ -120,7 +93,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       if (user) {
         setLoading(true);
         try {
-          await Promise.all([fetchBases(), fetchAssetTypes(), fetchAssets()]);
+          await Promise.all([fetchBases(), fetchAssets()]);
         } catch (err) {
           console.error('Failed to initialize data:', err);
         } finally {
@@ -129,7 +102,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       } else {
         setLoading(false);
         setBases([]);
-        setAssetTypes([]);
         setAssets([]);
       }
     };
@@ -138,12 +110,10 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const value: DataContextType = {
     bases,
-    assetTypes,
     assets,
     loading,
     error,
     refreshBases,
-    refreshAssetTypes,
     refreshAssets,
   };
 
